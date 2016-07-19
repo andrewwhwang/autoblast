@@ -1,0 +1,27 @@
+from Bio import Entrez
+from ete3 import NCBITaxa
+ncbi = NCBITaxa()
+Entrez.email = "A.N.Other@example.com"
+
+def getLinage(line,dbType):
+    memory = {}
+    line_arr = line.split("\t")
+    ID=line_arr[1]
+    pos=int(round(100 * int(line_arr[2]) / int(line_arr[4])))
+    pos2=int(round(100 * int(line_arr[3]) / int(line_arr[4])))
+    if dbType == 'nt':
+        lineage = ncbi.get_lineage(ID)
+        names = ncbi.get_taxid_translator(lineage)
+        strList = [str(names[taxid]) for taxid in lineage]
+        return '; '.join(strList) + "::" + str(pos)+"-"+str(pos2)
+    elif dbType == 'viruses' or dbType == 'blood':
+        if not memory.has_key(ID):
+            handle = Entrez.efetch(db='nucleotide', id=ID, retmode="xml")
+            records = Entrez.read(handle)
+            lineage = records[0]['GBSeq_taxonomy']
+            organism = records[0]['GBSeq_organism']
+            lineage = "; ".join(lineage.split("; ")[:-1] + [organism])
+            memory[ID] = lineage
+        return memory[ID] + "::" + str(pos)+"-"+str(pos2)
+    else:
+        return line_arr[5][:-1] + "::" + str(pos)+"-"+str(pos2)
